@@ -79,11 +79,15 @@ r = requests.get(requrl)
 
 errcode = r.json()['err']
 if errcode == 0:
-  total_energy=r.json()['dat'][3]['val']
-  today_energy=r.json()['dat'][0]['val']
+  energy_today=r.json()['dat'][0]['val']
+  energy_month=r.json()['dat'][1]['val']
+  energy_year=r.json()['dat'][2]['val']
+  energy_total=r.json()['dat'][3]['val']
   if config.debug == 1:
-    print ('Total energy: ' + str(total_energy) + 'kWh')
-    print ('Today energy: ' + str(today_energy) +'kWh')
+    print ('Energy Today: ' + str(energy_today) +'kWh')
+    print ('Energy Month: ' + str(energy_month) +'kWh')
+    print ('Energy Year: ' + str(energy_year) +'kWh')
+    print ('Energy total: ' + str(energy_total) + 'kWh')
 else:
   print('Errorcode '+str(errcode))
   pprint(r.json())
@@ -99,6 +103,20 @@ if errcode == 0:
   if config.debug == 1:
     print ('Timestamp: ' + str(timestamp))
     print ('Energy Now: ' + str(energy_now) + 'W')
+else:
+  print('Errorcode '+str(errcode))
+  pprint(r.json())
+
+
+requrl = buildRequestUrl('queryPlantActiveOuputPowerOneDay', str(salt), secret, token, config.devcode, config.plantId, config.pn, config.sn)
+print (requrl)
+r = requests.get(requrl)
+
+errcode = r.json()['err']
+if errcode == 0:
+  energy_over_day=r.json()['dat']['outputPower']
+  if config.debug == 1:
+    pprint(energy_over_day)
 else:
   print('Errorcode '+str(errcode))
   pprint(r.json())
