@@ -28,16 +28,16 @@ def getToken(salt):
   expire=r.json()['dat']['expire']
   return token, secret, expire
 
-#queryPlantActiveOuputPowerOneDay - Returns json data used in shinemonitor for displaying today graph over generated wattage
-#queryPlantDeviceStatus - Returns json status of inverter 0=OK
 #queryPlantCurrentData - Returns json summary of energy generated
+#queryPlantActiveOuputPowerOneDay - (Misspelled in API) Returns json data used in shinemonitor for displaying today graph over generated energy
+#queryDeviceDataOneDayPaging - Returns various json data, ex. energy generated now
 def buildRequestUrl(action, salt, secret, token, devcode, plantId, pn, sn):
   if action == 'queryPlantCurrentData':
     action='&action=queryPlantCurrentData&plantid='+plantId+'&par=ENERGY_TODAY,ENERGY_MONTH,ENERGY_YEAR,ENERGY_TOTAL,ENERGY_PROCEEDS,ENERGY_CO2,CURRENT_TEMP,CURRENT_RADIANT,BATTERY_SOC,ENERGY_COAL,ENERGY_SO2'
   elif action == 'queryPlantActiveOuputPowerOneDay':
     action='&action=queryPlantActiveOuputPowerOneDay&plantid='+plantId+'&date=' + datetime.today().strftime('%Y-%m-%d') + '&i18n=en_US&lang=en_US'
-  elif action == 'queryDeviceRealLastData':
-    action='&action=queryDeviceRealLastData&devaddr=1&pn'+pn+'&devcode='+devcode+'&sn='+sn+'&date='+datetime.today().strftime('%Y-%m-%d')+'&i18n=en_US&lang=en_US'
+  #elif action == 'queryDeviceRealLastData':
+  #  action='&action=queryDeviceRealLastData&devaddr=1&pn'+pn+'&devcode='+devcode+'&sn='+sn+'&date='+datetime.today().strftime('%Y-%m-%d')+'&i18n=en_US&lang=en_US'
   elif action == 'queryDeviceDataOneDayPaging':
     action='&action=queryDeviceDataOneDayPaging&devaddr=1&pn='+pn+'&devcode='+devcode+'&sn='+sn+'&date='+datetime.today().strftime('%Y-%m-%d')+'&page=0&pagesize=50&i18n=en_US&lang=en_US'
 
@@ -63,7 +63,6 @@ except:
   if config.debug == 1:
     print("Tokenfile not found, logging in using credentials")
   token, secret, expire = getToken(salt())
-  #Store token info in file
   f = open("token", "w")
   f.write(token+'\n')
   f.write(secret+'\n')
@@ -97,7 +96,7 @@ if errcode == 0:
     print ('Energy Today: ' + str(energy_today) +'kWh')
     print ('Energy Month: ' + str(energy_month) +'kWh')
     print ('Energy Year: ' + str(energy_year) +'kWh')
-    print ('Energy total: ' + str(energy_total) + 'kWh')
+    print ('Energy Total: ' + str(energy_total) + 'kWh')
 else:
   print('Errorcode '+str(errcode))
   pprint(r.json())
