@@ -11,6 +11,23 @@ import config
 def salt():
     return int(round(time_.time() * 1000))
 
+def getToken(salt):
+  #Build auth url
+  powSha1=hashlib.sha1()
+  powSha1.update(config.pwd.encode('utf-8'))
+  action= '&action=auth&usr='+str(config.usr)+'&company-key='+str(config.companykey);
+  pwdaction= str(salt) + str(powSha1.hexdigest()) + action  #This complete string needs SHA1
+  auth_sign=hashlib.sha1()
+  auth_sign.update(pwdaction.encode('utf-8'))
+  sign = str(auth_sign.hexdigest())
+  solarurl= baseURL+'?sign='+sign+'&salt='+str(salt)+action
+  print(solarurl)
+  r = requests.get(solarurl)
+  token=r.json()['dat']['token']
+  secret=r.json()['dat']['secret']
+  expire=r.json()['dat']['expire']
+  return token, secret, expire
+
 #queryPlantActiveOuputPowerOneDay - Returns json data used in shinemonitor for displaying today graph over generated wattage
 #queryPlantDeviceStatus - Returns json status of inverter 0=OK
 #queryPlantCurrentData - Returns json summary of energy generated
@@ -33,26 +50,28 @@ def buildRequestUrl(action, salt, secret, token, devcode, plantId, pn, sn):
 
 baseURL = 'http://web.shinemonitor.com/public/'
 
+#Use token if exists
+token, secret, expire = '','',''
+try:
+  f = open("token", "r")
+  print("Using tokenfile credentials")
+  token = f.readline()
+  secret= f.readline()
+  expire= f.readline()
+  f.close
+except e:
+  print("Tokenfile not found, logging in using credentials")
+  token, secret, expire = getToken(salt())
+  #Store token info in file
+  f = open("token", "w")
+  f.write(token+'\n')
+  f.write(secret+'\n')
+  f.write(str(expire))
+  f.close
+finally:
+  f.close
 
-#Build auth url and get token
-powSha1=hashlib.sha1()
-powSha1.update(config.pwd.encode('utf-8'))
-salt=salt()
-action= '&action=auth&usr='+str(config.usr)+'&company-key='+str(config.companykey);
-pwdaction= str(salt) + str(powSha1.hexdigest()) + action  #This complete string needs SHA1
-auth_sign=hashlib.sha1()
-auth_sign.update(pwdaction.encode('utf-8'))
-sign = str(auth_sign.hexdigest())
-solarurl= baseURL+'?sign='+sign+'&salt='+str(salt)+action
-print(solarurl)
-r = requests.get(solarurl)
-token=r.json()['dat']['token']
-secret=r.json()['dat']['secret']
-expire=r.json()['dat']['expire']
-
-# Got token, get data from plant
-
-
+#Get data
 requrl = buildRequestUrl('queryPlantCurrentData', salt, secret, token, config.devcode, config.plantId, config.pn, config.sn)
 print (requrl)
 r = requests.get(requrl)
