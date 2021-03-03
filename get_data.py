@@ -59,7 +59,7 @@ try:
   secret= f.readline()
   expire= f.readline()
   f.close
-except e:
+except:
   print("Tokenfile not found, logging in using credentials")
   token, secret, expire = getToken(salt())
   #Store token info in file
