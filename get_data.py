@@ -55,9 +55,9 @@ token, secret, expire = '','',''
 try:
   f = open("token", "r")
   print("Using tokenfile credentials")
-  token = f.readline()
-  secret= f.readline()
-  expire= f.readline()
+  token = f.readline().strip()
+  secret= f.readline().strip()
+  expire= f.readline().strip()
   f.close
 except:
   print("Tokenfile not found, logging in using credentials")
@@ -72,7 +72,7 @@ finally:
   f.close
 
 #Get data
-requrl = buildRequestUrl('queryPlantCurrentData', salt, secret, token, config.devcode, config.plantId, config.pn, config.sn)
+requrl = buildRequestUrl('queryPlantCurrentData', str(salt), secret, token, config.devcode, config.plantId, config.pn, config.sn)
 print (requrl)
 r = requests.get(requrl)
 #pprint(r.json())
@@ -86,8 +86,9 @@ if errcode == 0:
     print ('Today energy: ' + str(today_energy) +'kWh')
 else:
   print('Errorcode '+str(errcode))
+  pprint(r.json())
 
-requrl = buildRequestUrl('queryDeviceDataOneDayPaging', salt, secret, token, config.devcode, config.plantId, config.pn, config.sn)
+requrl = buildRequestUrl('queryDeviceDataOneDayPaging', str(salt), secret, token, config.devcode, config.plantId, config.pn, config.sn)
 print (requrl)
 r = requests.get(requrl)
 
@@ -100,3 +101,4 @@ if errcode == 0:
     print ('Energy Now: ' + str(energy_now) + 'W')
 else:
   print('Errorcode '+str(errcode))
+  pprint(r.json())
