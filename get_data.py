@@ -54,28 +54,28 @@ baseURL = 'http://web.shinemonitor.com/public/'
 token, secret, expire = '','',''
 try:
   f = open("token", "r")
-  print("Using tokenfile credentials")
+  if config.debug == 1:
+    print("Using tokenfile credentials")
   token = f.readline().strip()
   secret= f.readline().strip()
   expire= f.readline().strip()
-  f.close
 except:
-  print("Tokenfile not found, logging in using credentials")
+  if config.debug == 1:
+    print("Tokenfile not found, logging in using credentials")
   token, secret, expire = getToken(salt())
   #Store token info in file
   f = open("token", "w")
   f.write(token+'\n')
   f.write(secret+'\n')
   f.write(str(expire))
-  f.close
 finally:
   f.close
 
 #Get data
 requrl = buildRequestUrl('queryPlantCurrentData', str(salt), secret, token, config.devcode, config.plantId, config.pn, config.sn)
-print (requrl)
+if config.debug == 1:
+  print (requrl)
 r = requests.get(requrl)
-#pprint(r.json())
 
 errcode = r.json()['err']
 if errcode == 0:
@@ -83,6 +83,16 @@ if errcode == 0:
   energy_month=r.json()['dat'][1]['val']
   energy_year=r.json()['dat'][2]['val']
   energy_total=r.json()['dat'][3]['val']
+
+  try:
+    f = open("energy_summary.txt", "w")
+    f.write(energy_today+'\n')
+    f.write(energy_month+'\n')
+    f.write(energy_year+'\n')
+    f.write(energy_total)
+  finally:
+    f.close
+
   if config.debug == 1:
     print ('Energy Today: ' + str(energy_today) +'kWh')
     print ('Energy Month: ' + str(energy_month) +'kWh')
@@ -93,13 +103,22 @@ else:
   pprint(r.json())
 
 requrl = buildRequestUrl('queryDeviceDataOneDayPaging', str(salt), secret, token, config.devcode, config.plantId, config.pn, config.sn)
-print (requrl)
+if config.debug == 1:
+  print (requrl)
 r = requests.get(requrl)
 
 errcode = r.json()['err']
 if errcode == 0:
   timestamp=r.json()['dat']['row'][0]['field'][1]
   energy_now=r.json()['dat']['row'][0]['field'][5]
+
+  try:
+    f = open("energy_now.txt", "w")
+    f.write(timestamp+'\n')
+    f.write(energy_now)
+  finally:
+    f.close
+
   if config.debug == 1:
     print ('Timestamp: ' + str(timestamp))
     print ('Energy Now: ' + str(energy_now) + 'W')
@@ -107,14 +126,21 @@ else:
   print('Errorcode '+str(errcode))
   pprint(r.json())
 
-
 requrl = buildRequestUrl('queryPlantActiveOuputPowerOneDay', str(salt), secret, token, config.devcode, config.plantId, config.pn, config.sn)
-print (requrl)
+if config.debug == 1:
+  print (requrl)
 r = requests.get(requrl)
 
 errcode = r.json()['err']
 if errcode == 0:
   energy_over_day=r.json()['dat']['outputPower']
+
+  try:
+    f = open("energy_over_day.txt", "w")
+    f.write(str(energy_over_day))
+  finally:
+    f.close
+
   if config.debug == 1:
     pprint(energy_over_day)
 else:
