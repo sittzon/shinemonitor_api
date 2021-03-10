@@ -28,18 +28,20 @@ def getToken(salt):
   expire=r.json()['dat']['expire']
   return token, secret, expire
 
+#action = :
 #queryPlantCurrentData - Returns json summary of energy generated
 #queryPlantActiveOuputPowerOneDay - (Misspelled in API) Returns json data used in shinemonitor for displaying today graph over generated energy
 #queryDeviceDataOneDayPaging - Returns various json data, ex. energy generated now
+#queryPlantDeviceDesignatedInformation - Return for example offline/online status of inverter
 def buildRequestUrl(action, salt, secret, token, devcode, plantId, pn, sn):
   if action == 'queryPlantCurrentData':
     action='&action=queryPlantCurrentData&plantid='+plantId+'&par=ENERGY_TODAY,ENERGY_MONTH,ENERGY_YEAR,ENERGY_TOTAL,ENERGY_PROCEEDS,ENERGY_CO2,CURRENT_TEMP,CURRENT_RADIANT,BATTERY_SOC,ENERGY_COAL,ENERGY_SO2'
   elif action == 'queryPlantActiveOuputPowerOneDay':
     action='&action=queryPlantActiveOuputPowerOneDay&plantid='+plantId+'&date=' + datetime.today().strftime('%Y-%m-%d') + '&i18n=en_US&lang=en_US'
-  #elif action == 'queryDeviceRealLastData':
-  #  action='&action=queryDeviceRealLastData&devaddr=1&pn'+pn+'&devcode='+devcode+'&sn='+sn+'&date='+datetime.today().strftime('%Y-%m-%d')+'&i18n=en_US&lang=en_US'
   elif action == 'queryDeviceDataOneDayPaging':
     action='&action=queryDeviceDataOneDayPaging&devaddr=1&pn='+pn+'&devcode='+devcode+'&sn='+sn+'&date='+datetime.today().strftime('%Y-%m-%d')+'&page=0&pagesize=50&i18n=en_US&lang=en_US'
+  elif action == 'queryPlantDeviceDesignatedInformation':
+    action='&action=queryPlantDeviceDesignatedInformation&plantid='+plantId+'&devtype=512&i18n=en_US&parameter=energy_today,energy_total&i18n=en_US&lang=en_US'
 
   reqaction= str(salt) + secret + token + action
   req_sign=hashlib.sha1()
@@ -121,6 +123,28 @@ if errcode == 0:
   if config.debug == 1:
     print ('Timestamp: ' + str(timestamp))
     print ('Energy Now: ' + str(energy_now) + 'W')
+else:
+  print('Errorcode '+str(errcode))
+  pprint(r.json())
+
+
+requrl = buildRequestUrl('queryPlantDeviceDesignatedInformation', str(salt), secret, token, config.devcode, config.plantId, config.pn, config.sn)
+if config.debug == 1:
+  print (requrl)
+r = requests.get(requrl)
+
+errcode = r.json()['err']
+if errcode == 0:
+  status=r.json()['dat']['device'][0]['status']
+
+  try:
+    f = open("energy_now.txt", "a")
+    f.write('\n'+str(status))
+  finally:
+    f.close
+
+  if config.debug == 1:
+    print ('Status: ' + str(status))
 else:
   print('Errorcode '+str(errcode))
   pprint(r.json())
