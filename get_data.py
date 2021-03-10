@@ -7,6 +7,7 @@ import json
 import time as time_             #make sure we don't override time
 from datetime import datetime
 import config
+import re
 
 def salt():
     return int(round(time_.time() * 1000))
@@ -61,9 +62,16 @@ try:
   token = f.readline().strip()
   secret= f.readline().strip()
   expire= f.readline().strip()
+  #Try using token
+  requrl = buildRequestUrl('queryPlantDeviceDesignatedInformation', str(salt), secret, token, config.devcode, config.plantId, config.pn, config.sn)
+  r = requests.get(requrl)
+  errcode = r.json()['err']
+  if errcode != 0:
+    print("Token invalid")
+    raise error
 except:
   if config.debug == 1:
-    print("Tokenfile not found, logging in using credentials")
+    print("Logging in using credentials")
   token, secret, expire = getToken(salt())
   f = open("token", "w")
   f.write(token+'\n')
@@ -157,6 +165,7 @@ r = requests.get(requrl)
 errcode = r.json()['err']
 if errcode == 0:
   energy_over_day=r.json()['dat']['outputPower']
+  energy_over_day=re.sub(r'\'','\"',str(energy_over_day))
 
   try:
     f = open("energy_over_day.txt", "w")
