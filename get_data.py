@@ -5,9 +5,10 @@ from pprint import pprint
 import requests
 import json
 import time as time_             #make sure we don't override time
-from datetime import datetime
+from datetime import datetime, timedelta
 import config
 import re
+import sys
 
 def salt():
     return int(round(time_.time() * 1000))
@@ -22,11 +23,14 @@ def getToken(salt):
   auth_sign.update(pwdaction.encode('utf-8'))
   sign = str(auth_sign.hexdigest())
   solarurl= baseURL+'?sign='+sign+'&salt='+str(salt)+action
-  print(solarurl)
+  #print(solarurl)
   r = requests.get(solarurl)
   token=r.json()['dat']['token']
   secret=r.json()['dat']['secret']
   expire=r.json()['dat']['expire']
+  #Convert expire to datetime when expiring
+  d = datetime.now().today()
+  expire = d + timedelta(seconds=expire)
   return token, secret, expire
 
 #action = :
@@ -62,13 +66,19 @@ try:
   token = f.readline().strip()
   secret= f.readline().strip()
   expire= f.readline().strip()
-  #Try using token
-  requrl = buildRequestUrl('queryPlantDeviceDesignatedInformation', str(salt), secret, token, config.devcode, config.plantId, config.pn, config.sn)
-  r = requests.get(requrl)
-  errcode = r.json()['err']
-  if errcode != 0:
-    print("Token invalid")
+  #Check if token expired
+  d = datetime.now().today()
+  e = datetime.strptime(expire, '%Y-%m-%d %H:%M:%S.%f')
+  if config.debug == 1:
+    print("Datetime now:  "+str(d))
+    print("Expires:       "+str(e))
+  if(d > e):
+    if config.debug == 1:
+      print("Expired")
     raise error
+  else:
+    if config.debug == 1:
+      print("Not expired")
 except:
   if config.debug == 1:
     print("Logging in using credentials")
@@ -80,101 +90,178 @@ except:
 finally:
   f.close
 
-#Get data
-requrl = buildRequestUrl('queryPlantCurrentData', str(salt), secret, token, config.devcode, config.plantId, config.pn, config.sn)
-if config.debug == 1:
-  print (requrl)
-r = requests.get(requrl)
-
-errcode = r.json()['err']
-if errcode == 0:
-  energy_today=r.json()['dat'][0]['val']
-  energy_month=r.json()['dat'][1]['val']
-  energy_year=r.json()['dat'][2]['val']
-  energy_total=r.json()['dat'][3]['val']
-
-  try:
-    f = open("energy_summary.txt", "w")
-    f.write(energy_today+'\n')
-    f.write(energy_month+'\n')
-    f.write(energy_year+'\n')
-    f.write(energy_total)
-  finally:
-    f.close
-
+def getAllData():
+  #Get data
+  requrl = buildRequestUrl('queryPlantCurrentData', str(salt), secret, token, config.devcode, config.plantId, config.pn, config.sn)
   if config.debug == 1:
-    print ('Energy Today: ' + str(energy_today) +'kWh')
-    print ('Energy Month: ' + str(energy_month) +'kWh')
-    print ('Energy Year: ' + str(energy_year) +'kWh')
-    print ('Energy Total: ' + str(energy_total) + 'kWh')
-else:
-  print('Errorcode '+str(errcode))
-  pprint(r.json())
+    print (requrl)
+  r = requests.get(requrl)
 
-requrl = buildRequestUrl('queryDeviceDataOneDayPaging', str(salt), secret, token, config.devcode, config.plantId, config.pn, config.sn)
-if config.debug == 1:
-  print (requrl)
-r = requests.get(requrl)
+  errcode = r.json()['err']
+  if errcode == 0:
+    energy_today=r.json()['dat'][0]['val']
+    energy_month=r.json()['dat'][1]['val']
+    energy_year=r.json()['dat'][2]['val']
+    energy_total=r.json()['dat'][3]['val']
 
-errcode = r.json()['err']
-if errcode == 0:
-  timestamp=r.json()['dat']['row'][0]['field'][1]
-  energy_now=r.json()['dat']['row'][0]['field'][5]
+    try:
+      f = open("energy_summary.txt", "w")
+      f.write(energy_today+'\n')
+      f.write(energy_month+'\n')
+      f.write(energy_year+'\n')
+      f.write(energy_total)
+    finally:
+      f.close
 
-  try:
-    f = open("energy_now.txt", "w")
-    f.write(timestamp+'\n')
-    f.write(energy_now)
-  finally:
-    f.close
+    if config.debug == 1:
+      print ('Energy Today: ' + str(energy_today) +'kWh')
+      print ('Energy Month: ' + str(energy_month) +'kWh')
+      print ('Energy Year: ' + str(energy_year) +'kWh')
+      print ('Energy Total: ' + str(energy_total) + 'kWh')
+  else:
+    print('Errorcode '+str(errcode))
+    pprint(r.json())
 
+  requrl = buildRequestUrl('queryDeviceDataOneDayPaging', str(salt), secret, token, config.devcode, config.plantId, config.pn, config.sn)
   if config.debug == 1:
-    print ('Timestamp: ' + str(timestamp))
-    print ('Energy Now: ' + str(energy_now) + 'W')
-else:
-  print('Errorcode '+str(errcode))
-  pprint(r.json())
+    print (requrl)
+  r = requests.get(requrl)
+
+  errcode = r.json()['err']
+  if errcode == 0:
+    timestamp=r.json()['dat']['row'][0]['field'][1]
+    energy_now=r.json()['dat']['row'][0]['field'][5]
+
+    try:
+      f = open("energy_now.txt", "w")
+      f.write(timestamp+'\n')
+      f.write(energy_now)
+    finally:
+      f.close
+
+    if config.debug == 1:
+      print ('Timestamp: ' + str(timestamp))
+      print ('Energy Now: ' + str(energy_now) + 'W')
+  else:
+    print('Errorcode '+str(errcode))
+    pprint(r.json())
 
 
-requrl = buildRequestUrl('queryPlantDeviceDesignatedInformation', str(salt), secret, token, config.devcode, config.plantId, config.pn, config.sn)
-if config.debug == 1:
-  print (requrl)
-r = requests.get(requrl)
-
-errcode = r.json()['err']
-if errcode == 0:
-  status=r.json()['dat']['device'][0]['status']
-
-  try:
-    f = open("energy_now.txt", "a")
-    f.write('\n'+str(status))
-  finally:
-    f.close
-
+  requrl = buildRequestUrl('queryPlantDeviceDesignatedInformation', str(salt), secret, token, config.devcode, config.plantId, config.pn, config.sn)
   if config.debug == 1:
-    print ('Status: ' + str(status))
-else:
-  print('Errorcode '+str(errcode))
-  pprint(r.json())
+    print (requrl)
+  r = requests.get(requrl)
 
-requrl = buildRequestUrl('queryPlantActiveOuputPowerOneDay', str(salt), secret, token, config.devcode, config.plantId, config.pn, config.sn)
-if config.debug == 1:
-  print (requrl)
-r = requests.get(requrl)
+  errcode = r.json()['err']
+  if errcode == 0:
+    status=r.json()['dat']['device'][0]['status']
 
-errcode = r.json()['err']
-if errcode == 0:
-  energy_over_day=r.json()['dat']['outputPower']
-  energy_over_day=re.sub(r'\'','\"',str(energy_over_day))
+    try:
+      f = open("energy_now.txt", "a")
+      f.write('\n'+str(status))
+    finally:
+      f.close
 
-  try:
-    f = open("energy_over_day.txt", "w")
-    f.write(str(energy_over_day))
-  finally:
-    f.close
+    if config.debug == 1:
+      print ('Status: ' + str(status))
+  else:
+    print('Errorcode '+str(errcode))
+    pprint(r.json())
 
+  requrl = buildRequestUrl('queryPlantActiveOuputPowerOneDay', str(salt), secret, token, config.devcode, config.plantId, config.pn, config.sn)
   if config.debug == 1:
-    pprint(energy_over_day)
+    print (requrl)
+  r = requests.get(requrl)
+
+  errcode = r.json()['err']
+  if errcode == 0:
+    energy_over_day=r.json()['dat']['outputPower']
+    energy_over_day=re.sub(r'\'','\"',str(energy_over_day))
+
+    try:
+      f = open("energy_over_day.txt", "w")
+      f.write(str(energy_over_day))
+    finally:
+      f.close
+
+    if config.debug == 1:
+      pprint(energy_over_day)
+  else:
+    print('Errorcode '+str(errcode))
+    pprint(r.json())
+
+def getStatus():
+  requrl = buildRequestUrl('queryPlantDeviceDesignatedInformation', str(salt), secret, token, config.devcode, config.plantId, config.pn, config.sn)
+  r = requests.get(requrl)
+  errcode = r.json()['err']
+
+  if errcode == 0:
+    status=r.json()['dat']['device'][0]['status']
+    if (status == 0):
+      status = '"Online"'
+    else:
+      status = 'Offline"'
+    return('{"Status": '+str(status)+'}')
+  else:
+    return('{Errorcode: '+str(errcode)+'}')
+
+def getEnergyNow():
+  requrl = buildRequestUrl('queryDeviceDataOneDayPaging', str(salt), secret, token, config.devcode, config.plantId, config.pn, config.sn)
+  r = requests.get(requrl)
+  errcode = r.json()['err']
+
+  if errcode == 0:
+    timestamp=r.json()['dat']['row'][0]['field'][1]
+    energy_now=r.json()['dat']['row'][0]['field'][5]
+    r = '{"TimeStamp": "'+str(timestamp)+'"'
+    r += ', "Energy": '+str(energy_now)
+    r += ', "Unit": "W"}'
+    return r
+  else:
+    return('{Errorcode: '+str(errcode)+'}')
+
+def getEnergySummary():
+  requrl = buildRequestUrl('queryPlantCurrentData', str(salt), secret, token, config.devcode, config.plantId, config.pn, config.sn)
+  r = requests.get(requrl)
+  errcode = r.json()['err']
+
+  if errcode == 0:
+    energy_today=r.json()['dat'][0]['val']
+    energy_month=r.json()['dat'][1]['val']
+    energy_year=r.json()['dat'][2]['val']
+    energy_total=r.json()['dat'][3]['val']
+    r = '{"Today": '+str(energy_today)
+    r += ', "Month": '+str(energy_month)
+    r += ', "Year": '+str(energy_year)
+    r += ', "Total": '+str(energy_total)
+    r += ', "Unit": "kWh"}'
+    return r
+  else:
+    print('{Errorcode: '+str(errcode)+'}')
+    pprint(r.json())
+
+def getEnergyTimeline():
+  requrl = buildRequestUrl('queryPlantActiveOuputPowerOneDay', str(salt), secret, token, config.devcode, config.plantId, config.pn, config.sn)
+  r = requests.get(requrl)
+  errcode = r.json()['err']
+
+  if errcode == 0:
+    energy_over_day=r.json()['dat']['outputPower']
+    energy_over_day=re.sub(r'\'','\"',str(energy_over_day))
+    return energy_over_day
+  else:
+    print('Errorcode '+str(errcode))
+    pprint(r.json())
+
+if (len(sys.argv) > 1):
+  endpoint = str(sys.argv[1])
+  if(endpoint == '--status'):
+    print(getStatus())
+  if(endpoint == '--energyNow'):
+    print(getEnergyNow())
+  if(endpoint == '--energySummary'):
+    print(getEnergySummary())
+  if(endpoint == '--energyTimeline'):
+    print(getEnergyTimeline())
 else:
-  print('Errorcode '+str(errcode))
-  pprint(r.json())
+  getAllData()
