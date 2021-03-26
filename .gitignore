@@ -3,3 +3,6 @@ token
 energy_summary.txt
 energy_now.txt
 energy_over_day.txt
+.vscode/
+obj/
+bin/
