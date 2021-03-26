@@ -200,7 +200,7 @@ def getStatus():
     if (status == 0):
       status = '"Online"'
     else:
-      status = 'Offline"'
+      status = '"Offline"'
     return('{"Status": '+str(status)+'}')
   else:
     return('{Errorcode: '+str(errcode)+'}')

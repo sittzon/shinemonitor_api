@@ -12,6 +12,7 @@ namespace shinemonitor_api.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Produces("application/json")]
     public class ShineMonitorController : ControllerBase
     {
         private readonly ILogger<ShineMonitorController> _logger;
@@ -25,16 +26,16 @@ namespace shinemonitor_api.Controllers
         {
             //Data is sent to the server about every 5min
             //If not 5min has passed since last query, just send previous result
-            var output = "python3 get_data.py --energyNow".Bash();
+            var output = "python3 src/get_data.py --energyNow".Bash();
             //Console.WriteLine(output);
             _logger.LogDebug(output);
             try {
                 EnergyNow e = JsonSerializer.Deserialize<EnergyNow>(output);
                 e.Date = DateTime.ParseExact(e.TimeStamp, "yyyy-MM-dd HH:mm:ss",System.Globalization.CultureInfo.InvariantCulture);
                 return e;
-            } catch {
+            } catch(Exception e)  {
                 _logger.LogError(output);
-                throw new ArgumentException($"JSON serialisation error.");
+                throw new ArgumentException(e.ToString());
             }
         }
 
@@ -42,42 +43,42 @@ namespace shinemonitor_api.Controllers
         [HttpGet("/EnergySummary")]
         public EnergySummary GetEnergySummary()
         {
-            var output = "python3 get_data.py --energySummary".Bash();
+            var output = "python3 src/get_data.py --energySummary".Bash();
             _logger.LogDebug(output);
             try {
                 EnergySummary e = JsonSerializer.Deserialize<EnergySummary>(output);
                 return e;
-            } catch {
+            } catch(Exception e)  {
                 _logger.LogError(output);
-                throw new ArgumentException($"JSON serialisation error.");
+                throw new ArgumentException(e.ToString());
             }
         }
 
         [HttpGet("/Status")]
         public StatusObj GetStatus()
         {
-            var output = "python3 get_data.py --status".Bash();
+            var output = "python3 src/get_data.py --status".Bash();
             _logger.LogDebug(output);
             try {
                 StatusObj status = JsonSerializer.Deserialize<StatusObj>(output);
                 return status;
-            } catch {
+            } catch(Exception e) {
                 _logger.LogError(output);
-                throw new ArgumentException($"JSON serialisation error.");
+                throw new ArgumentException(e.ToString());
             }
         }
 
         [HttpGet("/Timeline")]
         public EnergyTimelineObj[] GetEnergyTimeline()
         {
-            var output = "python3 get_data.py --energyTimeline".Bash();
+            var output = "python3 src/get_data.py --energyTimeline".Bash();
             _logger.LogDebug(output);
             try {
                 EnergyTimelineObj[] timeline = JsonSerializer.Deserialize<EnergyTimelineObj[]>(output);
                 return timeline;
-            } catch {
+            } catch(Exception e) {
                 _logger.LogError(output);
-                throw new ArgumentException($"JSON serialisation error.");
+                throw new ArgumentException(e.ToString());
             }
         }
     }
