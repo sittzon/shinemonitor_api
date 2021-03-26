@@ -68,12 +68,12 @@ namespace shinemonitor_api.Controllers
         }
 
         [HttpGet("/Timeline")]
-        public EnergyTimeline GetEnergyTimeline()
+        public EnergyTimelineObj[] GetEnergyTimeline()
         {
             var output = "python3 get_data.py --energyTimeline".Bash();
             _logger.LogDebug(output);
             try {
-                EnergyTimeline timeline = JsonSerializer.Deserialize<EnergyTimeline>(output);
+                EnergyTimelineObj[] timeline = JsonSerializer.Deserialize<EnergyTimelineObj[]>(output);
                 return timeline;
             } catch {
                 _logger.LogError(output);

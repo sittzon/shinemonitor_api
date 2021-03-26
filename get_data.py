@@ -248,6 +248,11 @@ def getEnergyTimeline():
   if errcode == 0:
     energy_over_day=r.json()['dat']['outputPower']
     energy_over_day=re.sub(r'\'','\"',str(energy_over_day))
+    energy_over_day=re.sub(r'(\"val\":\ )\"([\d\.]+)\"',r'\1\2',str(energy_over_day))
+    energy_over_day=re.sub(r'\"val\"','\"Value\"',str(energy_over_day))
+    energy_over_day=re.sub(r'\"ts\"','\"TimeStamp\"',str(energy_over_day))
+    #Add unit
+    energy_over_day=re.sub(r'}',', "Unit": "kW"}',str(energy_over_day))
     return energy_over_day
   else:
     print('Errorcode '+str(errcode))
