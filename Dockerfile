@@ -16,11 +16,8 @@ RUN apt-get update \
   && apt-get install -y python3 python3-pip \
   && pip3 install requests
 WORKDIR /app
-COPY src/get_data.py ./src/get_data.py
-COPY src/config.py ./src/config.py
+COPY src/*.py ./src/
 COPY --from=build /app .
 EXPOSE 80
 EXPOSE 443
-EXPOSE 8000
-EXPOSE 8001
 ENTRYPOINT ["dotnet", "shinemonitor_api.dll"]

@@ -2,7 +2,7 @@ using System;
 
 namespace shinemonitor_api
 {
-    public class EnergySummary
+    public class EnergySummaryObj
     {
         public double Today { get; set; }
         public double Month { get; set; }
