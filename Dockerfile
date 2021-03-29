@@ -8,12 +8,19 @@ RUN dotnet restore
 
 # copy and publish app and libraries
 COPY src/ ./
-#COPY *.json ./
 RUN dotnet publish -c release -o /app --no-restore
-EXPOSE 80
 
 # final stage/image
 FROM mcr.microsoft.com/dotnet/aspnet:5.0
+RUN apt-get update \
+  && apt-get install -y python3 python3-pip \
+  && pip3 install requests
 WORKDIR /app
+COPY src/get_data.py ./src/get_data.py
+COPY src/config.py ./src/config.py
 COPY --from=build /app .
+EXPOSE 80
+EXPOSE 443
+EXPOSE 5000
+EXPOSE 5001
 ENTRYPOINT ["dotnet", "shinemonitor_api.dll"]
