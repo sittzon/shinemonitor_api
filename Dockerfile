@@ -21,6 +21,6 @@ COPY src/config.py ./src/config.py
 COPY --from=build /app .
 EXPOSE 80
 EXPOSE 443
-EXPOSE 5000
-EXPOSE 5001
+EXPOSE 8000
+EXPOSE 8001
 ENTRYPOINT ["dotnet", "shinemonitor_api.dll"]
