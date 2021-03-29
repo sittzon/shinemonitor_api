@@ -1,0 +1,23 @@
+version: '3.7'
+
+services:
+ api:
+  image: shinemonitorapi
+  build:
+    context: .
+    dockerfile: Dockerfile
+  ports:
+    #- 5000:80
+    #- 5001:443
+    - 5000:80
+    - 5001:443 
+  environment:
+    - ASPNETCORE_ENVIRONMENT=Development
+    - ASPNETCORE_URLS=https://+;http://+
+    - ASPNETCORE_HTTPS_PORT=5001
+    - ASPNETCORE_Kestrel__Certificates__Default__Password=password
+    - ASPNETCORE_Kestrel__Certificates__Default__Path=/https/aspnetapp.pfx
+  volumes:
+    #- ./:/app
+    #macOS or Linux; Use %USERPROFILE% instead of {HOME} on Windows
+    - ${HOME}/.aspnet/https:/https/
