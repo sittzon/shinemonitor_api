@@ -6,3 +6,4 @@ energy_over_day.txt
 .vscode/
 obj/
 bin/
+.DS_Store
