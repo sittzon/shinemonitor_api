@@ -18,3 +18,4 @@ services:
   volumes:
     #macOS or Linux; Use %USERPROFILE% instead of {HOME} on Windows
     - ${HOME}/.aspnet/https:/https/
+  container_name: shinemonitor_api

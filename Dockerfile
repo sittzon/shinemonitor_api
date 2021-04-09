@@ -15,6 +15,7 @@ FROM mcr.microsoft.com/dotnet/aspnet:5.0
 RUN apt-get update \
   && apt-get install -y python3 python3-pip \
   && pip3 install requests
+ENV TZ=Europe/Stockholm
 WORKDIR /app
 COPY src/*.py ./src/
 COPY --from=build /app .
