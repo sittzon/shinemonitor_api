@@ -7,3 +7,5 @@ energy_over_day.txt
 obj/
 bin/
 .DS_Store
+docker-compose.yml
+src/config.py
