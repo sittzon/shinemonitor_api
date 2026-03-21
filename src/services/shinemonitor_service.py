@@ -206,26 +206,25 @@ def getStatus():
   if errcode == 0 and json_data is not None:
     status=json_data['dat']['device'][0]['status']
     if (status == 0):
-      status = '"Online"'
+      status = "Online"
     else:
-      status = '"Offline"'
-    return('{"Status": '+str(status)+'}')
+      status = "Offline"
+    return {"Status": status}
   else:
-    return('{Errorcode: '+str(errcode)+'}')
+    return {"Error": str(errcode)}
 
 def getEnergyNow():
   json_data, errcode = make_request(Action.ENERGY_TODAY)
   if errcode == 0 and json_data is not None:
     timestamp=json_data['dat']['row'][0]['field'][1]
     energy_now=json_data['dat']['row'][0]['field'][5]
-    r = json.dumps({
+    return {
       "TimeStamp": str(timestamp),
       "Energy": float(energy_now),
       "Unit": "W"
-    })
-    return r
+    }
   else:
-    return('{Errorcode: '+str(errcode)+'}')
+    return {"Error": str(errcode)}
 
 def getEnergySummary():
   json_data, errcode = make_request(Action.SUMMARY)
@@ -234,18 +233,15 @@ def getEnergySummary():
     energy_month=json_data['dat'][1]['val']
     energy_year=json_data['dat'][2]['val']
     energy_total=json_data['dat'][3]['val']
-    r = json.dumps({
+    return {
       "Today": float(energy_today),
       "Month": float(energy_month),
       "Year": float(energy_year),
       "Total": float(energy_total),
       "Unit": "kWh"
-    })
-    return r
+    }
   else:
-    print('{Errorcode: '+str(errcode)+'}')
-    if json_data is not None:
-        pprint(json_data)
+    return {"Error": str(errcode)}
 
 def getEnergyTimeline():
   json_data, errcode = make_request(Action.TIMELINE)
@@ -255,9 +251,8 @@ def getEnergyTimeline():
     energy_over_day=re.sub(r'("val":\ )"([\d\.]+)"',r'\1\2',str(energy_over_day))
     energy_over_day=re.sub(r'"val"','"Value"',str(energy_over_day))
     energy_over_day=re.sub(r'"ts"','"TimeStamp"',str(energy_over_day))
-    #Add unit
     energy_over_day=re.sub(r'}',', "Unit": "kW"}',str(energy_over_day))
-    return energy_over_day
+    return json.loads(energy_over_day)
   else:
     print('Errorcode '+str(errcode))
     if json_data is not None:
