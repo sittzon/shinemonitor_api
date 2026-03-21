@@ -1,16 +1,38 @@
 # shinemonitor_api
-Get info about your solar installation from ShineMonitor. REST-API with swagger using Dotnet Core with a Python backend-backend.
+Get info about your solar installation from ShineMonitor. The project is a python FastAPI application that provides an REST-API to interact with Shinemonitor. 
 
-First install python requests with `python3 -m pip install requests`.
+## Setup Instructions
+### 1. Create a virtual environment
+```
+python3 -m venv .venv
+source .venv/bin/activate  # On Windows use `venv\Scripts\activate`
+```
 
-Fill in user information in config.py. The Python script is the part actually calling the Shinemonitor web. Use it standalone with ```python3 get_data.py```. If no arguments are provided to the script, it writes all information to a set of files. The flags ```--status```, ```--energyNow```, ```--energySummary``` or ```--energyTimeline``` can be used to only get specific information returned to console.
+### 2. Install dependencies
+```
+pip install -r requirements.txt
+```
 
-To run the REST-API project, first create a Https development certificate (https://docs.microsoft.com/en-us/aspnet/core/security/docker-https?view=aspnetcore-5.0).
+### 3. Run the application
+```
+uvicorn src.main:app --reload
+```
 
-To run the API locally, use ```dotnet build``` and ```dotnet run```. The Swagger interface should now be accessible at https://localhost:5001.
+### Docker
+```
+docker-compose build
+docker-compose up -d
+```
 
-To use docker, use docker-compose with ```docker-compose build``` and ```docker-compose up```. The Swagger interface should now be accessible at https://localhost:8001
+The Swagger interface should now be accessible at https://localhost:8000/swagger
 
+## Usage
+Once the application is running, you can access the following endpoints:
+
+- **Get Status:** `/status`
+- **Get Energy Now:** `/now`
+- **Get Energy Summary:** `/summary`
+- **Get Energy Timeline:** `/timeline`
 
 ## Config parameters
 ### Username and Password

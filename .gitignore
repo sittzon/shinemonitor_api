@@ -6,6 +6,7 @@ energy_over_day.txt
 .vscode/
 obj/
 bin/
-.DS_Store
+*/.DS_Store
 docker-compose.yml
-src/config.py
+*/config.py
+.venv/*
