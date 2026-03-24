@@ -7,6 +7,10 @@ from enum import Enum
 #queryPlantDeviceDesignatedInformation - Return for example offline/online status of inverter
 class Action(Enum):
     SUMMARY = "queryPlantCurrentData"
-    TIMELINE = "queryPlantActiveOuputPowerOneDay"
+    TIMELINE_DAY = "queryPlantActiveOuputPowerOneDay"
+    TIMELINE_MONTH = "queryPlantEnergyMonthPerDay"
+    TIMELINE_YEAR = "queryPlantEnergyYearPerMonth"
+    TIMELINE_TOTAL = "queryPlantEnergyTotalPerYear"
+    PLANT_INFO = "queryPlantInfo"
     ENERGY_TODAY = "queryDeviceDataOneDayPaging"
     STATUS = "queryPlantDeviceDesignatedInformation"

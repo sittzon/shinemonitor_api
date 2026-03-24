@@ -10,6 +10,17 @@ import config as config
 import re
 import sys
 from enums import Action
+from schemas.index import EnergySummaryResponse, EnergyNowResponse, StatusResponse, EnergyTimelineResponse, TimelineMonthResponse, TimelineYearResponse, TimelineTotalResponse, PlantInfoResponse, PlantAddress, PlantProfit
+from typing import List
+
+def parse_timestamp(ts_str):
+    try:
+        return datetime.strptime(ts_str, '%Y-%m-%d %H:%M:%S')
+    except ValueError:
+        try:
+            return datetime.strptime(ts_str, '%Y-%m-%d')
+        except ValueError:
+            return datetime.strptime(ts_str, '%Y-%m')
 
 def salt():
     return int(round(time.time() * 1000))
@@ -35,11 +46,22 @@ def requestToken(salt):
   expire = d + timedelta(seconds=expire)
   return token, secret, expire
 
-def buildRequestUrl(action: Action, salt, secret, token, devcode, plantId, pn, sn):
+def buildRequestUrl(action: Action, salt, secret, token, devcode, plantId, pn, sn, date=None):
   if action == Action.SUMMARY:
     action_params = '&action=queryPlantCurrentData&plantid='+plantId+'&par=ENERGY_TODAY,ENERGY_MONTH,ENERGY_YEAR,ENERGY_TOTAL'#,ENERGY_PROCEEDS,ENERGY_CO2,CURRENT_TEMP,CURRENT_RADIANT,BATTERY_SOC,ENERGY_COAL,ENERGY_SO2'
-  elif action == Action.TIMELINE:
-    action_params = '&action=queryPlantActiveOuputPowerOneDay&plantid='+plantId+'&date=' + datetime.today().strftime('%Y-%m-%d')# + '&i18n=en_US&lang=en_US'
+  elif action == Action.TIMELINE_DAY:
+    date_str = date if date else datetime.today().strftime('%Y-%m-%d')
+    action_params = '&action=queryPlantActiveOuputPowerOneDay&plantid='+plantId+'&date=' + date_str
+  elif action == Action.TIMELINE_MONTH:
+    date_str = date if date else datetime.today().strftime('%Y-%m')
+    action_params = '&action=queryPlantEnergyMonthPerDay&plantid='+plantId+'&date='+ date_str
+  elif action == Action.TIMELINE_YEAR:
+    date_str = date if date else datetime.today().strftime('%Y')
+    action_params = '&action=queryPlantEnergyYearPerMonth&plantid='+plantId+'&date='+ date_str
+  elif action == Action.TIMELINE_TOTAL:
+    action_params = '&action=queryPlantEnergyTotalPerYear&plantid='+plantId
+  elif action == Action.PLANT_INFO:
+    action_params = '&action=queryPlantInfo&plantid='+plantId
   elif action == Action.ENERGY_TODAY:
     action_params = '&action=queryDeviceDataOneDayPaging&devaddr=1&pn='+pn+'&devcode='+devcode+'&sn='+sn+'&date='+datetime.today().strftime('%Y-%m-%d')#+'&page=0&pagesize=50&i18n=en_US&lang=en_US'
   elif action == Action.STATUS:
@@ -52,10 +74,10 @@ def buildRequestUrl(action: Action, salt, secret, token, devcode, plantId, pn, s
   requrl= baseURL + '?sign='+ sign + '&salt=' + str(salt) + '&token=' + token + action_params
   return requrl
 
-def make_request(action: Action):
+def make_request(action: Action, date=None):
   token, secret = getToken()
   salt_val = salt()
-  requrl = buildRequestUrl(action, str(salt_val), secret, token, config.devcode, config.plantId, config.pn, config.sn)
+  requrl = buildRequestUrl(action, str(salt_val), secret, token, config.devcode, config.plantId, config.pn, config.sn, date)
   if config.debug == 1:
     print(requrl)
   r = requests.get(requrl)
@@ -113,93 +135,6 @@ def getToken():
     except NameError:
         pass
   return token, secret
-    
-
-def getAllData():
-  # 1. Query Plant Current Data
-  json_data, errcode = make_request(Action.SUMMARY)
-  if errcode == 0 and json_data is not None:
-    energy_today=json_data['dat'][0]['val']
-    energy_month=json_data['dat'][1]['val']
-    energy_year=json_data['dat'][2]['val']
-    energy_total=json_data['dat'][3]['val']
-
-    try:
-      f = open("energy_summary.txt", "w")
-      f.write(energy_today+'\n')
-      f.write(energy_month+'\n')
-      f.write(energy_year+'\n')
-      f.write(energy_total)
-    finally:
-      f.close()
-
-    if config.debug == 1:
-      print ('Energy Today: ' + str(energy_today) +'kWh')
-      print ('Energy Month: ' + str(energy_month) +'kWh')
-      print ('Energy Year: ' + str(energy_year) +'kWh')
-      print ('Energy Total: ' + str(energy_total) + 'kWh')
-  else:
-    print('Errorcode '+str(errcode))
-    if json_data is not None:
-        pprint(json_data)
-
-  # 2. Query Device Data One Day Paging
-  json_data, errcode = make_request(Action.ENERGY_TODAY)
-  if errcode == 0 and json_data is not None:
-    timestamp=json_data['dat']['row'][0]['field'][1]
-    energy_now=json_data['dat']['row'][0]['field'][5]
-
-    try:
-      f = open("energy_now.txt", "w")
-      f.write(timestamp+'\n')
-      f.write(energy_now)
-    finally:
-      f.close()
-
-    if config.debug == 1:
-      print ('Timestamp: ' + str(timestamp))
-      print ('Energy Now: ' + str(energy_now) + 'W')
-  else:
-    print('Errorcode '+str(errcode))
-    if json_data is not None:
-        pprint(json_data)
-
-  # 3. Query Plant Device Designated Information
-  json_data, errcode = make_request(Action.STATUS)
-  if errcode == 0 and json_data is not None:
-    status=json_data['dat']['device'][0]['status']
-
-    try:
-      f = open("energy_now.txt", "a")
-      f.write('\n'+str(status))
-    finally:
-      f.close()
-
-    if config.debug == 1:
-      print ('Status: ' + str(status))
-  else:
-    print('Errorcode '+str(errcode))
-    if json_data is not None:
-        pprint(json_data)
-
-  # 4. Query Plant Active Output Power One Day
-  json_data, errcode = make_request(Action.TIMELINE)
-  if errcode == 0 and json_data is not None:
-    energy_over_day=json_data['dat']['outputPower']
-    energy_over_day=re.sub(r'\'','\"',str(energy_over_day))
-
-    try:
-      f = open("energy_over_day.txt", "w")
-      f.write(str(energy_over_day))
-    finally:
-      f.close()
-
-    if config.debug == 1:
-      pprint(energy_over_day)
-  else:
-    print('Errorcode '+str(errcode))
-    if json_data is not None:
-        pprint(json_data)
 
 def getStatus():
   json_data, errcode = make_request(Action.STATUS)
@@ -209,7 +144,7 @@ def getStatus():
       status = "Online"
     else:
       status = "Offline"
-    return {"Status": status}
+    return StatusResponse(Status=status)
   else:
     return {"Error": str(errcode)}
 
@@ -218,11 +153,8 @@ def getEnergyNow():
   if errcode == 0 and json_data is not None:
     timestamp=json_data['dat']['row'][0]['field'][1]
     energy_now=json_data['dat']['row'][0]['field'][5]
-    return {
-      "TimeStamp": str(timestamp),
-      "Energy": float(energy_now),
-      "Unit": "W"
-    }
+    timestamp_dt = datetime.strptime(str(timestamp), '%Y-%m-%d %H:%M:%S')
+    return EnergyNowResponse(TimeStamp=timestamp_dt, Energy=float(energy_now), Unit="W")
   else:
     return {"Error": str(errcode)}
 
@@ -233,18 +165,12 @@ def getEnergySummary():
     energy_month=json_data['dat'][1]['val']
     energy_year=json_data['dat'][2]['val']
     energy_total=json_data['dat'][3]['val']
-    return {
-      "Today": float(energy_today),
-      "Month": float(energy_month),
-      "Year": float(energy_year),
-      "Total": float(energy_total),
-      "Unit": "kWh"
-    }
+    return EnergySummaryResponse(Today=float(energy_today), Month=float(energy_month), Year=float(energy_year), Total=float(energy_total), Unit="kWh")
   else:
     return {"Error": str(errcode)}
 
-def getEnergyTimeline():
-  json_data, errcode = make_request(Action.TIMELINE)
+def getEnergyTimeline(date=None):
+  json_data, errcode = make_request(Action.TIMELINE_DAY, date)
   if errcode == 0 and json_data is not None:
     energy_over_day=json_data['dat']['outputPower']
     energy_over_day=re.sub(r'\'','"',str(energy_over_day))
@@ -252,11 +178,116 @@ def getEnergyTimeline():
     energy_over_day=re.sub(r'"val"','"Value"',str(energy_over_day))
     energy_over_day=re.sub(r'"ts"','"TimeStamp"',str(energy_over_day))
     energy_over_day=re.sub(r'}',', "Unit": "kW"}',str(energy_over_day))
-    return json.loads(energy_over_day)
+    data = json.loads(energy_over_day)
+    return [EnergyTimelineResponse(TimeStamp=parse_timestamp(item['TimeStamp']), Value=item['Value'], Unit=item['Unit']) for item in data]
   else:
     print('Errorcode '+str(errcode))
     if json_data is not None:
         pprint(json_data)
+
+def getEnergyTimelineMonth(date=None):
+  json_data, errcode = make_request(Action.TIMELINE_MONTH, date)
+  if errcode == 0 and json_data is not None:
+    energy_over_month=json_data['dat']['perday']
+    energy_over_month=re.sub(r'\'','"',str(energy_over_month))
+    energy_over_month=re.sub(r'("val":\ )"([\d\.]+)"',r'\1\2',str(energy_over_month))
+    energy_over_month=re.sub(r'"val"','"Value"',str(energy_over_month))
+    energy_over_month=re.sub(r'"ts"','"TimeStamp"',str(energy_over_month))
+    energy_over_month=re.sub(r'}',', "Unit": "kWh"}',str(energy_over_month))
+    data = json.loads(energy_over_month)
+    return [TimelineMonthResponse(TimeStamp=parse_timestamp(item['TimeStamp']), Value=item['Value'], Unit=item['Unit']) for item in data]
+  else:
+    print('Errorcode '+str(errcode))
+    if json_data is not None:
+        pprint(json_data)
+
+def getEnergyTimelineYear(date=None):
+  json_data, errcode = make_request(Action.TIMELINE_YEAR, date)
+  if errcode == 0 and json_data is not None:
+    energy_over_year=json_data['dat']['permonth']
+    energy_over_year=re.sub(r'\'','"',str(energy_over_year))
+    energy_over_year=re.sub(r'("val":\ )"([\d\.]+)"',r'\1\2',str(energy_over_year))
+    energy_over_year=re.sub(r'"val"','"Value"',str(energy_over_year))
+    energy_over_year=re.sub(r'"ts"','"TimeStamp"',str(energy_over_year))
+    energy_over_year=re.sub(r'}',', "Unit": "kWh"}',str(energy_over_year))
+    data = json.loads(energy_over_year)
+    return [TimelineYearResponse(TimeStamp=parse_timestamp(item['TimeStamp']), Value=item['Value'], Unit=item['Unit']) for item in data]
+  else:
+    print('Errorcode '+str(errcode))
+    if json_data is not None:
+        pprint(json_data)
+
+def getEnergyTimelineTotal():
+  json_data, errcode = make_request(Action.TIMELINE_TOTAL)
+  if errcode == 0 and json_data is not None:
+    energy_over_total=json_data['dat']['peryear']
+    energy_over_total=re.sub(r'\'','"',str(energy_over_total))
+    energy_over_total=re.sub(r'("val":\ )"([\d\.]+)"',r'\1\2',str(energy_over_total))
+    energy_over_total=re.sub(r'"val"','"Value"',str(energy_over_total))
+    energy_over_total=re.sub(r'"ts"','"TimeStamp"',str(energy_over_total))
+    energy_over_total=re.sub(r'}',', "Unit": "kWh"}',str(energy_over_total))
+    data = json.loads(energy_over_total)
+    return [TimelineTotalResponse(TimeStamp=parse_timestamp(item['TimeStamp']), Value=item['Value'], Unit=item['Unit']) for item in data]
+  else:
+    print('Errorcode '+str(errcode))
+    if json_data is not None:
+        pprint(json_data)
+
+def getPlantInfo():
+  json_data, errcode = make_request(Action.PLANT_INFO)
+  if errcode == 0 and json_data is not None:
+    dat = json_data.get('dat', {})
+    address_data = dat.get('address', {})
+    profit_data = dat.get('profit', {})
+    
+    address = PlantAddress(
+        address=address_data.get('address', ''),
+        city=address_data.get('city', ''),
+        country=address_data.get('country', ''),
+        county=address_data.get('county', ''),
+        lat=address_data.get('lat', ''),
+        lon=address_data.get('lon', ''),
+        province=address_data.get('province', ''),
+        timezone=address_data.get('timezone', 0)
+    ) if address_data else None
+    
+    profit = PlantProfit(
+        co2=profit_data.get('co2', ''),
+        coal=profit_data.get('coal', ''),
+        consProfit=profit_data.get('consProfit', 0.0),
+        currency=profit_data.get('currency', ''),
+        feedProfit=profit_data.get('feedProfit', 0.0),
+        purchProfit=profit_data.get('purchProfit', 0.0),
+        selfProfit=profit_data.get('selfProfit', 0.0),
+        so2=profit_data.get('so2', ''),
+        soldProfit=profit_data.get('soldProfit', 0.0),
+        unitProfit=profit_data.get('unitProfit', '')
+    ) if profit_data else None
+    
+    return PlantInfoResponse(
+        name=dat.get('name', ''),
+        capacity=dat.get('capacity', ''),
+        location=dat.get('location', ''),
+        latitude=address_data.get('lat', '') if address_data else '',
+        longitude=address_data.get('lon', '') if address_data else '',
+        installDate=dat.get('install', ''),
+        gridConnectionDate=dat.get('gts', ''),
+        nominalPower=dat.get('nominalPower'),
+        energyYearEstimate=dat.get('energyYearEstimate'),
+        status=dat.get('status'),
+        pid=dat.get('pid'),
+        uid=dat.get('uid'),
+        address=address,
+        profit=profit,
+        energyOffset=dat.get('energyOffset'),
+        gts=dat.get('gts'),
+        flag=dat.get('flag')
+    )
+  else:
+    print('Errorcode '+str(errcode))
+    if json_data is not None:
+        pprint(json_data)
+    return {}
 
 if (len(sys.argv) > 1):
   endpoint = str(sys.argv[1])
@@ -268,5 +299,11 @@ if (len(sys.argv) > 1):
     print(getEnergySummary())
   if(endpoint == '--energyTimeline'):
     print(getEnergyTimeline())
-else:
-  getAllData()
+  if(endpoint == '--energyTimelineMonth'):
+    print(getEnergyTimelineMonth())
+  if(endpoint == '--energyTimelineYear'):
+    print(getEnergyTimelineYear())
+  if(endpoint == '--energyTimelineTotal'):
+    print(getEnergyTimelineTotal())
+  if(endpoint == '--plantInfo'):
+    print(getPlantInfo())
