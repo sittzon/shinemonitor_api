@@ -11,3 +11,7 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
     container_name: shinemonitor_api
+    volumes:
+      - ./token:/app/token
+      - ./src/config.py:/app/src/config.py:ro
+      - ./data:/app/data

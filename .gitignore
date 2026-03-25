@@ -10,3 +10,5 @@ bin/
 docker-compose.yml
 */config.py
 .venv/*
+cache.db
+.DS_Store
